@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import (division, print_function)
 
@@ -9,19 +9,25 @@ import sys
 from Framework import Framework
 from Simulator import LunarLanderSimulator
 from PolicyGradientAgent import PolicyGradientAgent
+from multiDistClass import MultiDistAgent
 
 simulator = LunarLanderSimulator()
 
 def run_experiment(Lambda, alpha, twe, trunc_normal, subspaces, num_runs,num_episodes=20000, num_procs=None,name=""):
     returns = np.empty((num_runs, num_episodes), dtype=np.float64)
     results.append(returns)
-    for i in xrange(num_runs):
+    for i in range(num_runs):
         print(name)
-        agent = PolicyGradientAgent (simulator, 
+        agent = MultiDistAgent (simulator, 
                                      Lambda=Lambda, alpha_u=alpha, alpha_v=alpha,
                                      tile_weight_exponent=twe,
                                      trunc_normal=trunc_normal,
-                                     subspaces=subspaces)
+                                     subspaces=subspaces, seed=i)
+        # agent = PolicyGradientAgent (simulator,
+        #                              Lambda=Lambda, alpha_u=alpha, alpha_v=alpha,
+        #                              tile_weight_exponent=twe,
+        #                              trunc_normal=trunc_normal,
+        #                              subspaces=subspaces)
         agent.persist_state()
         framework = Framework(simulator, agent, num_episodes=num_episodes)
         framework.train(num_procs=num_procs)

@@ -5,7 +5,7 @@ import numpy as np
 import collections
 import ctypes
 import multiprocessing as mp
-import scipy.weave as weave
+# import scipy.weave as weave
 import scipy.stats as stats
 
 from TileCoder import TileCoder, HashingTileCoder
@@ -279,7 +279,7 @@ class LinearFunctionApprox:
             return_val = value; 
         """
         names = [ 'features', 'feature_weights', 'weights' ]
-        return weave.inline (code, names, type_converters=weave.converters.blitz)
+        # return weave.inline (code, names, type_converters=weave.converters.blitz)
 
     def add_features (self, features, scaling=1.0):
         self.trace.appendleft ((features, scaling))
@@ -296,7 +296,7 @@ class LinearFunctionApprox:
         names = [ 'step_size', 'feature_weights', 'weights', 'features', 'scaling' ]
         falloff = self.falloff
         for (features, scaling) in self.trace:
-            weave.inline (code, names, type_converters=weave.converters.blitz)
+            # weave.inline (code, names, type_converters=weave.converters.blitz)
             step_size *= falloff
 
 
@@ -321,14 +321,14 @@ class EligibilityTrace:
         features = self.features
         feature_weights = self.feature_weights
         length, num_features = features.shape
-        weave.inline ("""
-            for (int i = 0; i < length; i++) {
-                double amount = double(weights(i)) * double(value);
-                for (int j = 0; j < num_features; j++) {
-                    vec(features(i,j)) += amount * double(feature_weights(j));
-                }
-            }
-        """, locals().keys(), type_converters=weave.converters.blitz)
+        # weave.inline ("""
+        #     for (int i = 0; i < length; i++) {
+        #         double amount = double(weights(i)) * double(value);
+        #         for (int j = 0; j < num_features; j++) {
+        #             vec(features(i,j)) += amount * double(feature_weights(j));
+        #         }
+        #     }
+        # """, locals().keys(), type_converters=weave.converters.blitz)
 
     def clear (self):
         self.weights.fill(0.0)
