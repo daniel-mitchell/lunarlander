@@ -36,6 +36,7 @@ class MultiDistAgent:
     # def __init__(self, alphaU, alphaVInit, alphaDecay, tau, epsilon, inac, s, seed, printOutput, numEpisodes):
     def __init__(self, simulator, dt=0.5, Lambda=0.75, alpha_v=0.1, alpha_u=0.1, num_features=2**20,
                     tile_weight_exponent=0.5, trunc_normal=True, subspaces=[1,2,6], seed=0):
+        print("Starting Seed",seed)
         self.simulator = simulator
         self.minAction = (0, -simulator.max_rcs)
         self.maxAction = (simulator.max_thrust, simulator.max_rcs)
@@ -93,6 +94,7 @@ class MultiDistAgent:
 
     def initialize(self, state):
         self.i_episode += 1
+        print("Starting Episode",self.i_episode)
         self.x = np.array(self.tc.indices(state))
         self.returnAmount = 0
         self.rBar = 0
@@ -107,7 +109,7 @@ class MultiDistAgent:
     def update(self, state, reward, terminal=False, learn=True):
         self.returnAmount += reward
         xPrime = np.array(self.tc.indices(state))
-        self.chosenDistPrime = int(np.sum(self.v[self.xPrime]) < np.sum(self.v[self.xPrime + self.tc.totalTiles]))
+        self.chosenDistPrime = int(np.sum(self.v[xPrime]) < np.sum(self.v[xPrime + self.tc.totalTiles]))
 
         #Update values
         self.delta = reward - self.rBar + self.gamma*(np.sum(self.v[xPrime])+np.sum(self.v[xPrime + \

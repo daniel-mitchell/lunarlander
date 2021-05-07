@@ -150,12 +150,13 @@ class Framework:
                 if i % 100 == 0:
                     print(i, 'Return =', self.returns[i])
 
-        procs = [mp.Process (target=proc, args=(None,)) for i in range(num_procs)]
-        try:
-            for p in procs:
-                p.start()
-            for p in procs:
-                p.join()
-        finally:
-            for p in procs:
-                p.terminate()
+        proc(0)
+        # procs = [mp.Process (target=proc, args=(None,)) for i in range(num_procs)]
+        # try:
+        #     for p in procs:
+        #         p.start()
+        #     for p in procs:
+        #         p.join()
+        # finally:
+        #     for p in procs:
+        #         p.terminate()
