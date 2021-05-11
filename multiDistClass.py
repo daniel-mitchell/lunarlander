@@ -12,7 +12,7 @@ import multiprocessing as mp
 # MAX_TIMESTEPS_PER_EPISODE = 1000000
 # ALPHA_U = 0.05
 # ALPHA_V = 1
-# ALPHA_R = 0.0
+ALPHA_R = 0.0
 # ALPHA_N = 1.0
 # TAU = 16
 GAMMA = 1
@@ -37,6 +37,7 @@ class MultiDistAgent:
     def __init__(self, simulator, dt=0.5, Lambda=0.75, alpha_v=0.1, alpha_u=0.1, num_features=2**20,
                     tile_weight_exponent=0.5, trunc_normal=True, subspaces=[1,2,6], seed=0):
         print("Starting Seed",seed)
+        self.printOutput = True
         self.simulator = simulator
         self.minAction = (0, -simulator.max_rcs)
         self.maxAction = (simulator.max_thrust, simulator.max_rcs)
@@ -56,7 +57,7 @@ class MultiDistAgent:
         self.tc = self.make_tile_coder(tile_weight_exponent, subspaces)
         self.u = np.zeros(self.tc.num_features*6) #Parameters
         self.v = np.zeros(self.tc.num_features*2) #Weights for critic
-        #self.v = np.ones(tc.totalTiles*3)*0.1 #Weights for critic
+        #self.v = np.ones(tc.num_features*2)*0.1 #Weights for critic
         self.w = np.zeros(self.tc.num_features*6) #Weights for actor
         self.maxReturn = 0
         self.timedOut = 0
@@ -109,16 +110,16 @@ class MultiDistAgent:
     def update(self, state, reward, terminal=False, learn=True):
         self.returnAmount += reward
         xPrime = np.array(self.tc.indices(state))
-        self.chosenDistPrime = int(np.sum(self.v[xPrime]) < np.sum(self.v[xPrime + self.tc.totalTiles]))
+        self.chosenDistPrime = int(np.sum(self.v[xPrime]) < np.sum(self.v[xPrime + self.tc.num_features]))
 
         #Update values
         self.delta = reward - self.rBar + self.gamma*(np.sum(self.v[xPrime])+np.sum(self.v[xPrime + \
-                    (1+self.chosenDistPrime)*self.tc.totalTiles])) -\
-                    (np.sum(self.v[self.x]) + np.sum(self.v[self.x + (1+self.chosenDist)*self.tc.totalTiles]))
+                    (1+self.chosenDistPrime)*self.tc.num_features])) -\
+                    (np.sum(self.v[self.x]) + np.sum(self.v[self.x + (1+self.chosenDist)*self.tc.num_features]))
         self.rBar += ALPHA_R*self.delta
         self.ev *= self.gamma*self.lambdaa
         self.ev[self.x] += 1
-        self.ev[self.x + (1+self.chosenDist)*self.tc.totalTiles] += 1
+        self.ev[self.x + (1+self.chosenDist)*self.tc.num_features] += 1
         self.v += self.alphaV*self.delta*self.ev
 
         #Compute gradlog
@@ -155,9 +156,9 @@ class MultiDistAgent:
                 for s1 in range(tc.numTiles[1]*tc.numTilings):
                     d0 = s0/(tc.numTiles[0]*tc.numTilings)*(env.high_state[0] - env.low_state[0]) + env.low_state[0]
                     d1 = s1/(tc.numTiles[1]*tc.numTilings)*(env.high_state[1] - env.low_state[1]) + env.low_state[1]
-                    tiles = np.array(tc.tilecode(np.array([d0, d1])))
+                    tiles = np.array(tc.indices(np.array([d0, d1])))
                     alpha = math.exp(np.sum(params[tiles])) + 1
-                    beta = math.exp(np.sum(params[tiles + tc.totalTiles])) + 1
+                    beta = math.exp(np.sum(params[tiles + tc.num_features])) + 1
                     mean = alpha/(alpha+beta)
                     var = alpha*beta/((alpha+beta)*(alpha+beta)*(alpha+beta+1))
 
@@ -166,9 +167,9 @@ class MultiDistAgent:
                 for s1 in range(tc.numTiles[1]*tc.numTilings):
                     d0 = s0/(tc.numTiles[0]*tc.numTilings)*(env.high_state[0] - env.low_state[0]) + env.low_state[0]
                     d1 = s1/(tc.numTiles[1]*tc.numTilings)*(env.high_state[1] - env.low_state[1]) + env.low_state[1]
-                    tiles = np.array(tc.tilecode(np.array([d0, d1])))
-                    alpha = math.exp(np.sum(params[tiles + 2*tc.totalTiles])) + 1
-                    beta = math.exp(np.sum(params[tiles + 3*tc.totalTiles])) + 1
+                    tiles = np.array(tc.indices(np.array([d0, d1])))
+                    alpha = math.exp(np.sum(params[tiles + 2*tc.num_features])) + 1
+                    beta = math.exp(np.sum(params[tiles + 3*tc.num_features])) + 1
                     mean = alpha/(alpha+beta)
                     var = alpha*beta/((alpha+beta)*(alpha+beta)*(alpha+beta+1))
                     f.write(",".join(map(str, [d0, d1, mean, var])) + "\n")
@@ -178,8 +179,8 @@ class MultiDistAgent:
                 for s1 in range(tc.numTiles[1]*tc.numTilings):
                     d0 = s0/(tc.numTiles[0]*tc.numTilings)*(env.high_state[0] - env.low_state[0]) + env.low_state[0]
                     d1 = s1/(tc.numTiles[1]*tc.numTilings)*(env.high_state[1] - env.low_state[1]) + env.low_state[1]
-                    tiles = np.array(tc.tilecode(np.array([d0, d1])))
-                    if np.sum(weights[tiles]) < np.sum(weights[tiles + tc.totalTiles]):
+                    tiles = np.array(tc.indices(np.array([d0, d1])))
+                    if np.sum(weights[tiles]) < np.sum(weights[tiles + tc.num_features]):
                         f.write(",".join(map(str, [d0, d1, 1])) + "\n")
                     else:
                         f.write(",".join(map(str, [d0, d1, 0])) + "\n")
@@ -221,7 +222,7 @@ class MultiDistAgent:
             gradLogBeta0[self.x] = (math.log(1 - self.action[0]) + scipy.special.digamma(self.alpha[0] + self.beta[0])
                             - scipy.special.digamma(self.beta[0])) * (self.beta[0] - 1)
             gradLogAlpha1[self.x] = (math.log(self.action[1]) + scipy.special.digamma(self.alpha[1] + self.beta[1])\
-                            - scipy.special.digamma(alpha[1])) * (alpha[1] - 1)
+                            - scipy.special.digamma(self.alpha[1])) * (self.alpha[1] - 1)
             gradLogBeta1[self.x] = (math.log(1 - self.action[1]) + scipy.special.digamma(self.alpha[1] + self.beta[1])\
                             - scipy.special.digamma(self.beta[1])) * (self.beta[1] - 1)
         except ValueError as e:

@@ -4,7 +4,7 @@ import math
 import numpy as np
 import collections
 import ctypes
-import multiprocessing as mp
+import multiprocess as mp
 # import scipy.weave as weave
 import scipy.stats as stats
 

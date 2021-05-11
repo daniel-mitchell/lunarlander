@@ -1,7 +1,7 @@
 from __future__ import (division, print_function)
 
 import numpy as np
-import multiprocessing as mp
+import multiprocess as mp
 import ctypes
 import math
 
