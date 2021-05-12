@@ -1,7 +1,7 @@
 from __future__ import (division, print_function)
 
 import numpy as np
-import multiprocess as mp
+import multiprocessing as mp
 import ctypes
 import math
 
@@ -54,7 +54,11 @@ class Framework:
 
         self.simulator.initialize (*state)
 
-    def run (self, dt=float('inf'), learn=True):
+    def run_episode (self, learn=True):
+        self.run(float('inf'), learn)
+        return self.Return
+
+    def run (self, dt, learn=True):
 
         if not self.initialized:
             self.initialize()
@@ -139,24 +143,23 @@ class Framework:
         def proc (seed):
             np.random.seed (seed)
             while True:
-                self.run()
+                ep_return = self.run_episode()
                 with self.lock:
                     i = int(self.counter.value)
                     if i < len(self.returns):
-                        self.returns[i] = self.Return
+                        self.returns[i] = ep_return
                     else:
                         break
                     self.counter.value += 1
                 if i % 100 == 0:
                     print(i, 'Return =', self.returns[i])
 
-        proc(0)
-        # procs = [mp.Process (target=proc, args=(None,)) for i in range(num_procs)]
-        # try:
-        #     for p in procs:
-        #         p.start()
-        #     for p in procs:
-        #         p.join()
-        # finally:
-        #     for p in procs:
-        #         p.terminate()
+        procs = [mp.Process (target=proc, args=(None,)) for i in range(num_procs)]
+        try:
+            for p in procs:
+                p.start()
+            for p in procs:
+                p.join()
+        finally:
+            for p in procs:
+                p.terminate()

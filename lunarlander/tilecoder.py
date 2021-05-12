@@ -99,10 +99,10 @@ class OldTileCoder:
 
         space_dim = len(cell_size)
 
-        subspaces = itertools.imap (
+        subspaces = map (
             lambda s: np.array(s, dtype=np.int32),
             itertools.chain.from_iterable(
-                [ itertools.combinations (range(0, space_dim), dim)
+                [ itertools.combinations (list(range(0, space_dim)), dim)
                   for dim in subspace_dims ]))
 
         self.tilings = []
@@ -168,7 +168,7 @@ class TravisTileCoder: # 18
 
         space_dim = len(cell_size)
 
-        subspaces = itertools.imap (
+        subspaces = map (
             lambda s: np.array(s, dtype=np.int32),
             itertools.chain.from_iterable(
                 [ itertools.combinations (range(0, space_dim), dim)
