@@ -16,16 +16,16 @@ def run_experiment(num_episodes, Lambda, alpha, twe, trunc_normal, subspaces):
     np.random.seed()
     
     simulator = LunarLanderSimulator()
-    agent = MultiDistAgent (simulator, 
-                                 Lambda=Lambda, alpha_u=alpha, alpha_v=alpha,
-                                 tile_weight_exponent=twe,
-                                 trunc_normal=trunc_normal,
-                                 subspaces=subspaces, seed=i)
-    # agent = PolicyGradientAgent (simulator,
+    # agent = MultiDistAgent (simulator,
     #                              Lambda=Lambda, alpha_u=alpha, alpha_v=alpha,
     #                              tile_weight_exponent=twe,
     #                              trunc_normal=trunc_normal,
     #                              subspaces=subspaces)
+    agent = PolicyGradientAgent (simulator,
+                                 Lambda=Lambda, alpha_u=alpha, alpha_v=alpha,
+                                 tile_weight_exponent=twe,
+                                 trunc_normal=trunc_normal,
+                                 subspaces=subspaces)
     framework = Framework(simulator, agent)
 
     return np.array([framework.run_episode() for _ in range(num_episodes)])
@@ -53,16 +53,16 @@ def make_plot(results):
 experiments = {
     'weighted_trunc_normal': {
         'params': {'Lambda':0.75, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6]},
-        'num_runs':3, 'num_episodes':20000
+        'num_runs':3, 'num_episodes':2000
     },
-    'lambda_0.5_weighted_trunc_normal': {
-        'params': {'Lambda':0.5, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6]},
-        'num_runs':3, 'num_episodes':20000
-    },
-    'lambda_0.9_weighted_trunc_normal': {
-        'params': {'Lambda':0.9, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6]},
-        'num_runs':3, 'num_episodes':20000
-    }
+    # 'lambda_0.5_weighted_trunc_normal': {
+    #     'params': {'Lambda':0.5, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6]},
+    #     'num_runs':3, 'num_episodes':20000
+    # },
+    # 'lambda_0.9_weighted_trunc_normal': {
+    #     'params': {'Lambda':0.9, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6]},
+    #     'num_runs':3, 'num_episodes':20000
+    # }
 }
 
 if __name__ == "__main__":

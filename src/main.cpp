@@ -1,3 +1,4 @@
+#define USE_MULTI_DIST
 #include <numeric>
 #include <random>
 #include <cstdlib>
@@ -12,6 +13,7 @@
 #include "utility.hpp"
 #include "simulator.hpp"
 #include "lunar_lander_agent.hpp"
+#include "multi_dist_agent.hpp"
 #include "framework.hpp"
 
 double scaled_alpha (double lambda, double alpha_factor) {
@@ -86,11 +88,19 @@ int main (int argc, char* argv[]) {
   std::mt19937 init_rng(init_seed);
   if (!visualize) std::fprintf(stdout, "# agent-seed = %u\n# init-seed = %u\n", agent_seed, init_seed);
 
+#ifdef USE_MULTI_DIST
+  framework f(lunar_lander_simulator(),
+              multi_dist_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
+                                 tile_weight_exponent, trunc_normal, subspaces, 0),
+              dt,
+              agent_time_steps);
+#else
   framework f(lunar_lander_simulator(),
               lunar_lander_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
                                  tile_weight_exponent, trunc_normal, subspaces),
               dt,
               agent_time_steps);
+#endif
 
   for (int i = 0; i < num_episodes; i++) {
 

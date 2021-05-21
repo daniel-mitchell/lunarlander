@@ -5,6 +5,7 @@ add_library (lib_simulator OBJECT simulator.cpp)
 add_library (lib_tile_coder OBJECT tile_coder.cpp)
 add_library (lib_policy_gradient_agent OBJECT policy_gradient_agent.cpp)
 add_library (lib_lunar_lander_agent OBJECT lunar_lander_agent.cpp)
+add_library (lib_multi_dist_agent OBJECT multi_dist_agent.cpp)
 add_library (lib_framework OBJECT framework.cpp)
 add_library (lib_utility OBJECT utility.cpp)
 
@@ -13,6 +14,7 @@ add_executable (main main.cpp
                $<TARGET_OBJECTS:lib_tile_coder>
                $<TARGET_OBJECTS:lib_policy_gradient_agent>
                $<TARGET_OBJECTS:lib_lunar_lander_agent>
+               $<TARGET_OBJECTS:lib_multi_dist_agent>
                $<TARGET_OBJECTS:lib_framework>
                $<TARGET_OBJECTS:lib_utility>)
 
@@ -36,3 +38,7 @@ endif()
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    add_definitions ("-std=c++11 -Werror -Wall -O3")
 endif()
+
+#[[add_definitions(
+    -Wfatal-errors
+    )]]

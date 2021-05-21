@@ -14,7 +14,11 @@ using Eigen::VectorXd;
 struct framework {
 
   lunar_lander_simulator simulator;
+#ifdef USE_MULTI_DIST
+  multi_dist_agent agent;
+#else
   lunar_lander_agent agent;
+#endif
   double dt, time_elapsed, _return;
   std::vector<double> rewards;
   int agent_time_steps;
@@ -23,7 +27,13 @@ struct framework {
 
 public:
 
-  framework(const lunar_lander_simulator& simulator, const lunar_lander_agent& agent, double dt, int agent_time_steps)
+  framework(const lunar_lander_simulator& simulator,
+#ifdef USE_MULTI_DIST
+  const multi_dist_agent& agent,
+#else
+  const lunar_lander_agent& agent,
+#endif
+  double dt, int agent_time_steps)
     : simulator(simulator), agent(agent), dt(dt), agent_time_steps(agent_time_steps), visualiser(nullptr) { }
 
   double reward();
@@ -41,7 +51,6 @@ public:
 
   void set_visualiser (FILE* output) { visualiser = output; }
   void send_visualiser_data () const;
-
 };
 
 #endif

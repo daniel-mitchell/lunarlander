@@ -2,7 +2,7 @@
 import sys, random, signal, math
 import numpy as np
 import scipy.special
-from TileCoder import TileCoder, HashingTileCoder
+from lunarlander.tilecoder import TileCoder, HashingTileCoder
 from tilecoder2 import TileCoder as TileCoder2
 from enum import Enum
 import ctypes
