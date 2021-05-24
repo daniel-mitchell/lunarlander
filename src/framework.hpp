@@ -8,6 +8,7 @@
 
 #include "simulator.hpp"
 #include "lunar_lander_agent.hpp"
+#include "multi_dist_agent.hpp"
 
 using Eigen::VectorXd;
 

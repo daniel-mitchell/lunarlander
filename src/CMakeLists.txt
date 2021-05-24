@@ -39,6 +39,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    add_definitions ("-std=c++11 -Werror -Wall -O3")
 endif()
 
+add_definitions(
+    -DUSE_MULTI_DIST
+    )
 #[[add_definitions(
     -Wfatal-errors
     )]]
