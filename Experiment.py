@@ -53,7 +53,7 @@ def make_plot(results):
 experiments = {
     'weighted_trunc_normal': {
         'params': {'Lambda':0.75, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6]},
-        'num_runs':3, 'num_episodes':2000
+        'num_runs':3, 'num_episodes':1000
     },
     # 'lambda_0.5_weighted_trunc_normal': {
     #     'params': {'Lambda':0.5, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6]},

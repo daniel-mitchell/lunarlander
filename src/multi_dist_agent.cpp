@@ -85,7 +85,7 @@ multi_dist_agent::multi_dist_agent(double lambda, double alpha_v, double alpha_u
     // beta = Array2d::Zero();
 }
 
-double multi_dist_agent::sumIndices(VectorXd vec, VectorXi ind, int offset/*=0*/) {
+double multi_dist_agent::sumIndices(VectorXd& vec, VectorXi& ind, int offset/*=0*/) {
     double s = 0;
     for (int i = 0; i < ind.rows(); i++) {
         s += vec[ind[i] + offset];
@@ -165,6 +165,24 @@ VectorXd multi_dist_agent::computeGradLog() {
     return gradLog;
 }
 
+void multi_dist_agent::addGradLog() {
+    double alphaThrust = log(action.thrust) + boost::math::digamma(alpha[0] + beta[0])\
+                            - boost::math::digamma(alpha[0])*(alpha[0] - 1);
+    double betaThrust = log(1 - action.thrust) + boost::math::digamma(alpha[0] + beta[0])\
+                            - boost::math::digamma(beta[0])*(beta[0] - 1);
+    double alphaRcs = log(action.rcs) + boost::math::digamma(alpha[1] + beta[1])\
+                            - boost::math::digamma(alpha[1])*(alpha[1] - 1);
+    double betaRcs = log(1 - action.rcs) + boost::math::digamma(alpha[1] + beta[1])\
+                            - boost::math::digamma(beta[1])*(beta[1] - 1);
+    int offset = tc.get_num_features()*(chosenDist ? 4 : 2);
+    for (int i = 0; i < x.rows(); i++) {
+        eu[x[i]] += alphaThrust;
+        eu[x[i] + tc.get_num_features()] += betaThrust;
+        eu[x[i] + offset] += alphaRcs;
+        eu[x[i] + offset + tc.get_num_features()] += betaRcs;
+    }
+}
+
 lunar_lander_simulator::action multi_dist_agent::update([[maybe_unused]] std::mt19937& rng, VectorXd state,
                                         double reward, [[maybe_unused]] bool terminal, [[maybe_unused]] bool learn) {
     returnAmount += reward;
@@ -173,21 +191,22 @@ lunar_lander_simulator::action multi_dist_agent::update([[maybe_unused]] std::mt
 
     // Update Values
     double delta = reward - rBar + gamma*(sumIndices(v, xPrime) +\
-            sumIndices(v, xPrime, chosenDistPrime ? 2*tc.get_num_features() : tc.get_num_features())) -\
-            (sumIndices(v, x) + sumIndices(v, x, chosenDist ? 2*tc.get_num_features() : tc.get_num_features()));
+            sumIndices(v, xPrime, chosenDistPrime ? tc.get_num_features() : 0)) -\
+            (sumIndices(v, x) + sumIndices(v, x, chosenDist ? tc.get_num_features() : 0));
     rBar += alphaR*delta;
     ev *= gamma*lambda;
+    int offset = (chosenDist ? tc.get_num_features() : 0);
     for (int i = 0; i < x.rows(); i++) {
-        ev[x[i]]++;
-        ev[x[i] + chosenDist ? 2*tc.get_num_features() : tc.get_num_features()]++;
+        ev[x[i] + offset]++;
     }
     v += alphaV*delta*ev;
 
     //Compute gradLog
-    VectorXd gradLog = computeGradLog();
+    //VectorXd gradLog = computeGradLog();
     Array2d variance;
-    VectorXd varVec(6*tc.get_num_features());
+    VectorXd varVec;
     if (s) {
+        varVec = VectorXd(6*tc.get_num_features());
         variance = alpha*beta/((alpha + beta)*(alpha + beta)*(alpha + beta + 1));
         VectorXd varVecThrust = VectorXd::Constant(tc.get_num_features(), variance[0]);
         VectorXd varVecRcs = VectorXd::Constant(tc.get_num_features(), variance[1]);
@@ -195,8 +214,10 @@ lunar_lander_simulator::action multi_dist_agent::update([[maybe_unused]] std::mt
     }
 
     //Update Parameters;
-    eu = gamma*lambda*eu + gradLog;
+    eu = gamma*lambda*eu;// + gradLog;
+    addGradLog(); //Adds gradLog to eu
     if (inac) {
+        VectorXd gradLog = computeGradLog();
         w += alphaV*(delta*eu - gradLog.dot(gradLog)*w);
         if (s) {
             u += alphaU*w.cwiseProduct(varVec);

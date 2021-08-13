@@ -6,7 +6,8 @@
 
 #include <boost/math/constants/constants.hpp>
 #include <boost/math/special_functions/erf.hpp>
-
+#include <boost/math/distributions/beta.hpp>
+#include <boost/math/distributions/complement.hpp>
 
 inline double norm_pdf(double x) {
   using namespace std;
@@ -94,6 +95,48 @@ public:
   template <class Engine> double operator()(Engine& rng) const {
     double cdf_x = std::uniform_real_distribution<double>(cdf_alpha, cdf_beta)(rng);
     return norm_quantile(cdf_x) * sigma() + mu();
+  }
+
+};
+
+class beta_distribution {
+
+  double _alpha, _beta;
+  boost::math::beta_distribution<> dist;
+
+public:
+
+  beta_distribution(double alpha, double beta) : _alpha(alpha), _beta(beta), dist(alpha, beta) {}
+
+  double mean() const { return boost::math::mean(dist); }
+  // double mean() const { return _alpha/(_alpha+_beta); }
+
+  double variance() const { return boost::math::variance(dist); }
+  // double sigma() const { return sqrt((_alpha*_beta)/((_alpha+_beta)*(_alpha+_beta)*(_alpha+_beta+1))); }
+
+  double alpha() const { return _alpha; }
+
+  double beta() const { return _beta; }
+
+  double pdf(double x) const {
+    return boost::math::pdf(dist, x);
+  }
+
+  double cdf(double x) const {
+    return boost::math::cdf(dist, x);
+  }
+
+  double cdfc(double x) const {
+    return boost::math::cdf(boost::math::complemented2_type<boost::math::beta_distribution<>, double>(dist, x));
+  }
+
+  template <class Engine> double operator()(Engine& rng) {
+    std::gamma_distribution<double> gamma1(_alpha, 1);
+    std::gamma_distribution<double> gamma2(_beta, 1);
+    double sample1 = gamma1(rng);
+    double sample2 = gamma2(rng);
+    //Sampling z from beta(a, b) is z = (x/(x+y)) where x is sampled from gamma(a,1) and y from gamma(b,1)
+    return sample1/(sample1+sample2);
   }
 
 };

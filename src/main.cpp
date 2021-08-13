@@ -12,8 +12,10 @@
 #include "utility.hpp"
 #include "simulator.hpp"
 #include "lunar_lander_agent.hpp"
+#include "test_agent.hpp"
+#include "beta_agent.hpp"
 #include "multi_dist_agent.hpp"
-#include "framework.hpp"
+#include "framework.cpp"
 
 double scaled_alpha (double lambda, double alpha_factor) {
   return alpha_factor * (1 - lambda);
@@ -46,8 +48,11 @@ int main (int argc, char* argv[]) {
   int visualize_from = 0;
   int visualize_every = 1000;
 
+  enum AgentType {LUNAR=0, MULTI=1, TEST=2, BETA=3} agentType = LUNAR;
+
   for (int i = 1; i < argc; ++i) {
     if (std::string(argv[i]) == "--agent-seed") agent_seed = std::strtoul(argv[++i], nullptr, 10);
+    else if (std::string(argv[i]) == "--agent-type") agentType = AgentType(std::atoi(argv[++i]));
     else if (std::string(argv[i]) == "--init-seed") init_seed = std::strtoul(argv[++i], nullptr, 10);
     else if (std::string(argv[i]) == "--dt") dt = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--agent_steps") agent_time_steps = std::atoi(argv[++i]);
@@ -85,30 +90,111 @@ int main (int argc, char* argv[]) {
 
   std::mt19937 agent_rng(agent_seed);
   std::mt19937 init_rng(init_seed);
-  if (!visualize) std::fprintf(stdout, "# agent-seed = %u\n# init-seed = %u\n", agent_seed, init_seed);
+  //if (!visualize) std::fprintf(stdout, "# agent-seed = %u\n# init-seed = %u\n", agent_seed, init_seed);
 
-  framework f(lunar_lander_simulator(),
-#ifdef USE_MULTI_DIST
-              multi_dist_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
-                                 tile_weight_exponent, trunc_normal, subspaces, 0),
-#else
+//   framework f(lunar_lander_simulator(),
+// #ifdef USE_MULTI_DIST
+//               multi_dist_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
+//                                  tile_weight_exponent, trunc_normal, subspaces, agent_seed),
+// #elif defined(USE_TEST_DIST)
+//               test_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
+//                                  tile_weight_exponent, trunc_normal, subspaces),
+// #else
+//               lunar_lander_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
+//                                  tile_weight_exponent, trunc_normal, subspaces),
+// #endif
+//               dt,
+//               agent_time_steps);
+  switch(agentType) {
+    case LUNAR: {
+      framework<lunar_lander_agent> f(lunar_lander_simulator(),
               lunar_lander_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
-                                 tile_weight_exponent, trunc_normal, subspaces),
-#endif
+                                   tile_weight_exponent, trunc_normal, subspaces),
               dt,
               agent_time_steps);
+      for (int i = 0; i < num_episodes; i++) {
 
-  for (int i = 0; i < num_episodes; i++) {
+        if (visualize && i >= visualize_from) {
+          f.set_visualiser ((i - visualize_from) % visualize_every == 0 ? stdout : nullptr);
+        }
 
-    if (visualize && i >= visualize_from) {
-      f.set_visualiser ((i - visualize_from) % visualize_every == 0 ? stdout : nullptr);
+        f.run_episode(init_rng, agent_rng);
+
+        if (!visualize) std::fprintf(stdout, "%g\n", f.get_return());
+        // std::printf("%g\n", f.time_elapsed);
+      }
+      break;
     }
+    case MULTI: {
+      framework<multi_dist_agent> f(lunar_lander_simulator(),
+              multi_dist_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
+                                 tile_weight_exponent, trunc_normal, subspaces, agent_seed),
+              dt,
+              agent_time_steps);
+      for (int i = 0; i < num_episodes; i++) {
 
-    f.run_episode(init_rng, agent_rng);
+        if (visualize && i >= visualize_from) {
+          f.set_visualiser ((i - visualize_from) % visualize_every == 0 ? stdout : nullptr);
+        }
 
-    if (!visualize) std::fprintf(stdout, "%g\n", f.get_return());
-    // std::printf("%g\n", f.time_elapsed);
+        f.run_episode(init_rng, agent_rng);
+
+        if (!visualize) std::fprintf(stdout, "%g\n", f.get_return());
+        // std::printf("%g\n", f.time_elapsed);
+      }
+      break;
+    }
+    case TEST: {
+      framework<test_agent> f(lunar_lander_simulator(),
+              test_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
+                                 tile_weight_exponent, trunc_normal, subspaces),
+              dt,
+              agent_time_steps);
+      for (int i = 0; i < num_episodes; i++) {
+
+        if (visualize && i >= visualize_from) {
+          f.set_visualiser ((i - visualize_from) % visualize_every == 0 ? stdout : nullptr);
+        }
+
+        f.run_episode(init_rng, agent_rng);
+
+        if (!visualize) std::fprintf(stdout, "%g\n", f.get_return());
+        // std::printf("%g\n", f.time_elapsed);
+      }
+      break;
+    }
+    case BETA: {
+      framework<beta_agent> f(lunar_lander_simulator(),
+              beta_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
+                                 tile_weight_exponent, trunc_normal, subspaces),
+              dt,
+              agent_time_steps);
+      for (int i = 0; i < num_episodes; i++) {
+
+        if (visualize && i >= visualize_from) {
+          f.set_visualiser ((i - visualize_from) % visualize_every == 0 ? stdout : nullptr);
+        }
+
+        f.run_episode(init_rng, agent_rng);
+
+        if (!visualize) std::fprintf(stdout, "%g\n", f.get_return());
+        // std::printf("%g\n", f.time_elapsed);
+      }
+      break;
+    }
   }
+
+  // for (int i = 0; i < num_episodes; i++) {
+  //
+  //   if (visualize && i >= visualize_from) {
+  //     f.set_visualiser ((i - visualize_from) % visualize_every == 0 ? stdout : nullptr);
+  //   }
+  //
+  //   f.run_episode(init_rng, agent_rng);
+  //
+  //   if (!visualize) std::fprintf(stdout, "%g\n", f.get_return());
+  //   // std::printf("%g\n", f.time_elapsed);
+  // }
 
   return 0;
 }

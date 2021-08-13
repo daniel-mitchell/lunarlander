@@ -16,7 +16,7 @@ using namespace std;
 class multi_dist_agent {
   constexpr static double alphaR = 0;
   constexpr static double maxAlphaBeta = 1000;
-  constexpr static bool printOutput = true;
+  constexpr static bool printOutput = false;
 
   VectorXd max_state, min_state, max_clip_state, min_clip_state;
   hashing_tile_coder tc;
@@ -51,8 +51,9 @@ class multi_dist_agent {
   lunar_lander_simulator::action computeAction();
   void selectAction();
   double sampleBeta(double alphaa, double betaa);
-  double sumIndices(VectorXd vec, VectorXi ind, int offset=0);
+  double sumIndices(VectorXd& vec, VectorXi& ind, int offset=0);
   VectorXd computeGradLog();
+  void addGradLog();
 
   void clip_state(VectorXd& state) {
     for (unsigned int i = 0; i < state.size(); ++i) {

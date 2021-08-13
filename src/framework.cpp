@@ -5,7 +5,8 @@
 
 #include "framework.hpp"
 
-double framework::reward() {
+template <typename AgentType>
+double framework<AgentType>::reward() {
 
   double reward = -0.05 * simulator.get_main_throttle();
 
@@ -40,7 +41,8 @@ double framework::reward() {
 }
 
 
-void framework::initialize_simulator(std::mt19937& rng) {
+template <typename AgentType>
+void framework<AgentType>::initialize_simulator(std::mt19937& rng) {
 
   typedef std::uniform_real_distribution<double> uniform;
   typedef std::normal_distribution<double> normal;
@@ -60,7 +62,8 @@ void framework::initialize_simulator(std::mt19937& rng) {
 }
 
 
-VectorXd framework::simulator_state() const {
+template <typename AgentType>
+VectorXd framework<AgentType>::simulator_state() const {
 
   VectorXd state(6);
   state.segment<2>(0) = simulator.get_lander().get_pos();
@@ -79,13 +82,15 @@ VectorXd framework::simulator_state() const {
 }
 
 
-void framework::take_action(lunar_lander_simulator::action a) {
+template <typename AgentType>
+void framework<AgentType>::take_action(lunar_lander_simulator::action a) {
   if (simulator.get_lander().get_pos().x() < 0) a.rcs = -a.rcs;
   simulator.set_action(a);
 }
 
 
-void framework::run_episode(std::mt19937& init_rng, std::mt19937& agent_rng) {
+template <typename AgentType>
+void framework<AgentType>::run_episode(std::mt19937& init_rng, std::mt19937& agent_rng) {
 
   initialize_simulator(init_rng);
   take_action(agent.initialize(agent_rng, simulator_state()));
@@ -117,7 +122,8 @@ void framework::run_episode(std::mt19937& init_rng, std::mt19937& agent_rng) {
 }
 
 
-void framework::send_visualiser_data () const {
+template <typename AgentType>
+void framework<AgentType>::send_visualiser_data () const {
 
   if (!visualiser) return;
 
