@@ -2,157 +2,56 @@
 #define _SIMULATOR_HPP
 
 #include <vector>
+#include <random>
 #include <Eigen/Core>
 
-using Eigen::Vector2d;
+using Eigen::VectorXd;
 using Eigen::Matrix2d;
 
-class rigid_body {
-
-public:
-
-  struct collider {
-
-    Vector2d pos;
-    Matrix2d strength;
-
-    Vector2d impulse;
-    bool collided;
-    bool contacted;
-
-    collider (const Vector2d& pos, const Matrix2d& strength) : pos(pos), strength(strength) {
-      reset_collision();
-    }
-
-    void reset_collision () {
-      impulse.setZero();
-      collided = false;
-      contacted = false;
-    }
-
-  };
-
-private:
-
-  double mass, mom_inertia;
-  double mu_s, mu_k, restitution;
-  std::vector<collider> colliders;
-
-  Vector2d pos, vel;
-  double rot, rot_vel;
-
-  double breakage;
-  double bounding_radius;
-
-  bool process_collisions (const double restitution, const Vector2d& new_pos, const double new_rot,
-                           const std::vector<Vector2d>& colliders_dpos_drot, const bool contact_phase);
-
-  void accumulate_breakage (double new_breakage) {
-    breakage = std::max (breakage, new_breakage);
-  }
-
-public:
-
-  rigid_body(double mass, double mom_inertia, double mu_s, double mu_k, double restitution,
-             const std::vector<collider>& colliders);
-
-  void apply_impulse (Vector2d position, Vector2d impulse) {
-    vel += impulse / mass;
-    rot_vel += (position.x()*impulse.y() - position.y()*impulse.x()) / mom_inertia;
-  }
-
-  void update (const double dt, const Vector2d& force, const double torque);
-
-  void reset_breakage () {
-    breakage = 0.0;
-  }
-
-  void reset_collisions () {
-    for (unsigned int i = 0; i < colliders.size(); i++) colliders[i].reset_collision();
-  }
-
-  double get_min_y();
-
-  const std::vector<collider>& get_colliders() { return colliders; }
-
-  void set_pos(const Vector2d& new_pos) {
-    pos = new_pos;
-    pos.y() = std::max(get_min_y(), pos.y());
-  }
-
-  const Vector2d& get_pos() const { return pos; }
-
-  void set_vel(const Vector2d& new_vel) { vel = new_vel; }
-  const Vector2d& get_vel() const { return vel; }
-
-  void set_rot(double new_rot) {
-    rot = new_rot;
-    pos.y() = std::max(get_min_y(), pos.y());
-  }
-  double get_rot() const { return rot; }
-
-  void set_rot_vel(double new_rot_vel) { rot_vel = new_rot_vel; }
-  double get_rot_vel() const { return rot_vel; }
-
-  double get_mass() const { return mass; }
-  double get_mom_inertia() const { return mom_inertia; }
-  double get_breakage() const { return breakage; }
-
-};
-
-
-class lunar_lander_simulator {
+class mountain_car_simulator {
 
 public:
 
   struct action {
-    double thrust, rcs;
-    action(double thrust = 0, double rcs = 0) : thrust(thrust), rcs(rcs) {}
+    double thrust;
+    action(double thrust = 0) : thrust(thrust) {}
   };
 
 private:
 
-  rigid_body lander;
+  static constexpr double MAX_ACTION = 1.0;
+  static constexpr double MIN_ACTION = -MAX_ACTION;
+  static constexpr double MIN_POSITION = 0;//-1.2;
+  static constexpr double MAX_POSITION = 1.8;//0.6;
+  static constexpr double POSITION_OFFSET = -1.2; //Used for calculation of sinusoidal curve
+  static constexpr double MIN_START_POSITION = 0.6;//-0.6;
+  static constexpr double MAX_START_POSITION = 0.8;//-0.4;
+  static constexpr double MAX_SPEED = 0.07;
+  static constexpr double MIN_SPEED = -MAX_SPEED;
+  static constexpr double GOAL_POSITION = 1.65;//0.45;
+  static constexpr double POWER = 0.0015;
 
-  bool crashed, landed;
+  double position;
+  double velocity;
   action current_action;
-
-  // http://www.ibiblio.org/apollo/NARA-SW/R-567-sec6.pdf
-  // Assuming descent stage 50% fuel, ascent stage 100% fuel
-
-  static inline Vector2d IMAGE_TO_BODY_COORDS (double x, double y) {
-    return Vector2d(x - 0.5, y - 0.36335788) * LANDER_WIDTH();
-  }
-
-  static rigid_body::collider MAKE_LEG_COLLIDER (double x, double y, double strut_dir);
-  static rigid_body::collider MAKE_BODY_COLLIDER (double x, double y);
-  static std::vector<rigid_body::collider> MAKE_COLLIDERS();
+  bool done = false;
 
 public:
 
-  static double MAX_THRUST () { return 4.081113406545613; } // m/s^2
-  static double MAX_RCS () { return 0.16056757359680382; } // rad/s^2
-  static double LANDER_WIDTH () { return 9.07; } // m
+  static double MAX_THRUST () { return MAX_ACTION; }
 
-  lunar_lander_simulator();
+  mountain_car_simulator(std::mt19937 &rng);
 
-  void initialize(double pos_x=0, double pos_y=0, double vel_x=0, double vel_y=0, double rot=0, double rot_vel=0);
+  void initialize(std::mt19937 &rng);
 
-  void update(double dt);
+  void update([[maybe_unused]] double dt);
 
   void set_action(const action& new_action);
   const action& get_action () const { return current_action; }
 
-  double get_main_throttle() const { return current_action.thrust / MAX_THRUST(); }
-  double get_rcs_throttle() const { return current_action.rcs / MAX_RCS(); }
+  bool is_done() { return done; }
 
-  bool get_crashed() const { return crashed; }
-  void set_crashed() { crashed = true; }
-
-  bool get_landed() const { return landed; }
-
-  const rigid_body& get_lander() const { return lander; }
-  rigid_body& get_lander() { return lander; }
+  VectorXd get_state() const;
 
 };
 
