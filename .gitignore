@@ -7,3 +7,5 @@ data
 *.o
 build/
 .ropeproject
+buildNew/
+dataOld/

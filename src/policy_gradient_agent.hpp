@@ -36,6 +36,8 @@ public:
   double value(const VectorXi& features)  const;
 
   void update(double delta);
+
+  VectorXd get_weights() { return weights; };
 };
 
 
@@ -45,6 +47,8 @@ class td_critic {
   double gamma;
   linear_function_approx value;
   VectorXi features;
+  
+  double td_error;
 
 public:
 
@@ -56,8 +60,19 @@ public:
     value.initialize();
   }
 
+  double get_value();
+
   double evaluate(const VectorXi& new_features, double reward, bool terminal=false);
 
+  static double evaluate_multi(td_critic& critic_1, td_critic& critic_2, bool direction, \
+                                    const VectorXi& new_features, double reward, bool terminal);
+
+  static double evaluate_multi3(td_critic& critic_1, td_critic& critic_2, td_critic& critic_3, int direction, \
+                                    const VectorXi& new_features, double reward, bool terminal);
+  
+  double get_td_error() const { return td_error; };
+
+  VectorXd get_weights() { return value.get_weights(); };
 };
 
 class policy_gradient_actor {
@@ -69,6 +84,8 @@ class policy_gradient_actor {
   linear_function_approx mu, sigma;
   VectorXi features;
   double action;
+  
+  double mu_grad, sigma_grad;
 
 public:
 
@@ -93,10 +110,17 @@ public:
   double act(std::mt19937& rng, const VectorXi& new_features) {
     features = new_features;
     action = action_dist()(rng);
+    //action = std::min (std::max (min_action, action), max_action);
     return action;
   }
 
   void learn(double td_error);
+
+  double get_mu() const { return mu.value(features); }
+  double get_sigma() const { return min_sigma + sigma_range * (1 + std::tanh(sigma.value(features)/2)) / 2; }
+  
+  double get_mu_grad() const { return mu_grad; }
+  double get_sigma_grad() const { return sigma_grad; }
 
 };
 

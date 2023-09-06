@@ -1,11 +1,11 @@
-#include "beta_agent.hpp"
+#include "gauss_agent.hpp"
 
 #include <limits>
 
 
 using Eigen::VectorXd;
 
-tile_coder beta_agent::make_tile_coder(double tile_weight_exponent, const std::vector<int>& subspaces) {
+tile_coder gauss_agent::make_tile_coder(double tile_weight_exponent, const std::vector<int>& subspaces) {
 
   // const double PI = boost::math::constants::pi<double>();
 
@@ -15,10 +15,10 @@ tile_coder beta_agent::make_tile_coder(double tile_weight_exponent, const std::v
     unsigned int num_tiles, num_offsets;
   } cfg[] =
       { // #signed, bounded, tile_size, num_tiles, num_offsets
-        {     true,    true,      0.96,        10,          10 }, //position
-        {     true,   false,       0.4,        10,          10 }, //velocity
-        {     true,    true,    0.0836,        10,          10 }, //angle
-        {     true,   false,     0.275,        10,          10 }  //angular velocity
+        {     true,    true,      0.96,         8,           8 }, //position
+        {     true,   false,       0.4,         8,           8 }, //velocity
+        {     true,    true,    0.0836,         8,           8 }, //angle
+        {     true,   false,     0.275,         8,           8 }  //angular velocity
       };
       // A teaching method for reinforcement learning (JA Clouse, PE Utgoff, 1992) gives bounds for velocities
       // { // #signed, bounded, tile_size, num_tiles, num_offsets
@@ -57,27 +57,31 @@ tile_coder beta_agent::make_tile_coder(double tile_weight_exponent, const std::v
 }
 
 
-beta_pg_actor beta_agent::make_thrust_actor
-(const tile_coder_base& tc, double lambda, double alpha) {
+policy_gradient_actor gauss_agent::make_thrust_actor
+(const tile_coder_base& tc, double lambda, double alpha, bool trunc_normal) {
   const double max_thrust = cart_pole_simulator::MAX_THRUST();
-  return beta_pg_actor (tc, lambda, alpha,
+  return policy_gradient_actor (tc, lambda, alpha,
                                 -max_thrust, max_thrust, // min and max action
-                                0, 0, // initial alpha and beta
-                                1.0); // gamma
+                                max_thrust/64, max_thrust/2,//max_thrust/2, // min and max sigma
+                                0, max_thrust/8, // initial mu and sigma
+                                1.0, // gamma
+                                trunc_normal);
 }
-
-
-// test_pg_actor beta_agent::make_rcs_actor
-// (const tile_coder_base& tc, double lambda, double alpha) {
+//
+//
+// policy_gradient_actor gauss_agent::make_rcs_actor
+// (const tile_coder_base& tc, double lambda, double alpha, bool trunc_normal) {
 //   const double max_rcs = cart_pole_simulator::MAX_RCS();
-//   return test_pg_actor (tc, lambda, alpha,
+//   return policy_gradient_actor (tc, lambda, alpha,
 //                                 -max_rcs, max_rcs, // min and max action
-//                                 0, 0, // initial alpha and beta
-//                                 1.0); // gamma
+//                                 max_rcs/32, max_rcs, // min and max sigma
+//                                 0.0, max_rcs/4, // initial mu and sigma
+//                                 1.0, // gamma
+//                                 trunc_normal);
 // }
 
 
-cart_pole_simulator::action beta_agent::initialize(std::mt19937& rng, VectorXd state) {
+cart_pole_simulator::action gauss_agent::initialize(std::mt19937& rng, VectorXd state) {
   clip_state(state);
   VectorXi features = tc.indices(state);
 
@@ -89,15 +93,18 @@ cart_pole_simulator::action beta_agent::initialize(std::mt19937& rng, VectorXd s
 }
 
 
-cart_pole_simulator::action beta_agent::update(std::mt19937& rng, VectorXd state,
+cart_pole_simulator::action gauss_agent::update(std::mt19937& rng, VectorXd state,
                                                           double reward, bool terminal, bool learn) {
   clip_state(state);
   VectorXi features = tc.indices(state);
 
   if (learn) {
-    double td_error = critic.evaluate(features, reward, terminal);
+    double td_error = critic.evaluate(features, continuing ? reward - rBar : reward, terminal);
     thrust_actor.learn(td_error);
     // rcs_actor.learn(td_error);
+    if (continuing) {
+      rBar += alpha_r*td_error;
+    }
   }
 
   return compute_action(rng, features);

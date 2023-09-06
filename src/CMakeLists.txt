@@ -4,11 +4,15 @@ project (rldm CXX)
 add_library (lib_simulator OBJECT simulator.cpp)
 add_library (lib_tile_coder OBJECT tile_coder.cpp)
 add_library (lib_policy_gradient_agent OBJECT policy_gradient_agent.cpp)
-add_library (lib_lunar_lander_agent OBJECT lunar_lander_agent.cpp)
-add_library (lib_test_pg_agent OBJECT test_pg_agent.cpp)
-add_library (lib_test_agent OBJECT test_agent.cpp)
+add_library (lib_gauss_agent OBJECT gauss_agent.cpp)
+add_library (lib_beta_pg_agent OBJECT beta_pg_agent.cpp)
+add_library (lib_multi_beta_agent OBJECT multi_beta_agent.cpp)
 add_library (lib_beta_agent OBJECT beta_agent.cpp)
-add_library (lib_multi_dist_agent OBJECT multi_dist_agent.cpp)
+add_library (lib_multi_gauss_agent OBJECT multi_gauss_agent.cpp)
+add_library (lib_multi_gauss_2_agent OBJECT multi_gauss_2_agent.cpp)
+add_library (lib_multi_gauss_3_agent OBJECT multi_gauss_3_agent.cpp)
+add_library (lib_multi_gauss_4_agent OBJECT multi_gauss_4_agent.cpp)
+add_library (lib_sarsa_agent OBJECT sarsa_agent.cpp)
 add_library (lib_framework OBJECT framework.cpp)
 add_library (lib_utility OBJECT utility.cpp)
 
@@ -16,11 +20,15 @@ add_executable (main main.cpp
                $<TARGET_OBJECTS:lib_simulator>
                $<TARGET_OBJECTS:lib_tile_coder>
                $<TARGET_OBJECTS:lib_policy_gradient_agent>
-               $<TARGET_OBJECTS:lib_lunar_lander_agent>
-               $<TARGET_OBJECTS:lib_test_pg_agent>
-               $<TARGET_OBJECTS:lib_test_agent>
+               $<TARGET_OBJECTS:lib_gauss_agent>
+               $<TARGET_OBJECTS:lib_beta_pg_agent>
+               $<TARGET_OBJECTS:lib_multi_beta_agent>
                $<TARGET_OBJECTS:lib_beta_agent>
-               $<TARGET_OBJECTS:lib_multi_dist_agent>
+               $<TARGET_OBJECTS:lib_multi_gauss_agent>
+               $<TARGET_OBJECTS:lib_multi_gauss_2_agent>
+               $<TARGET_OBJECTS:lib_multi_gauss_3_agent>
+               $<TARGET_OBJECTS:lib_multi_gauss_4_agent>
+               $<TARGET_OBJECTS:lib_sarsa_agent>
                $<TARGET_OBJECTS:lib_framework>
                $<TARGET_OBJECTS:lib_utility>)
 

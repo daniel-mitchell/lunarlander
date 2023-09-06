@@ -1,11 +1,11 @@
-#include "beta_agent.hpp"
+#include "multi_beta_agent.hpp"
 
 #include <limits>
 
 
 using Eigen::VectorXd;
 
-tile_coder beta_agent::make_tile_coder(double tile_weight_exponent, const std::vector<int>& subspaces) {
+tile_coder multi_beta_agent::make_tile_coder(double tile_weight_exponent, const std::vector<int>& subspaces) {
 
   // const double PI = boost::math::constants::pi<double>();
 
@@ -57,47 +57,88 @@ tile_coder beta_agent::make_tile_coder(double tile_weight_exponent, const std::v
 }
 
 
-beta_pg_actor beta_agent::make_thrust_actor
+beta_pg_actor multi_beta_agent::make_thrust_actor_forward
 (const tile_coder_base& tc, double lambda, double alpha) {
   const double max_thrust = cart_pole_simulator::MAX_THRUST();
   return beta_pg_actor (tc, lambda, alpha,
-                                -max_thrust, max_thrust, // min and max action
+                                0.0, max_thrust, // min and max action
                                 0, 0, // initial alpha and beta
                                 1.0); // gamma
 }
 
 
-// test_pg_actor beta_agent::make_rcs_actor
+beta_pg_actor multi_beta_agent::make_thrust_actor_backward
+(const tile_coder_base& tc, double lambda, double alpha) {
+  const double max_thrust = cart_pole_simulator::MAX_THRUST();
+  return beta_pg_actor (tc, lambda, alpha,
+                                -max_thrust, 0, // min and max action
+                                0, 0, // initial alpha and beta
+                                1.0); // gamma
+}
+
+
+// test_pg_actor multi_beta_agent::make_rcs_actor_cw
 // (const tile_coder_base& tc, double lambda, double alpha) {
-//   const double max_rcs = cart_pole_simulator::MAX_RCS();
+//   const double max_rcs = lunar_lander_simulator::MAX_RCS();
 //   return test_pg_actor (tc, lambda, alpha,
-//                                 -max_rcs, max_rcs, // min and max action
+//                                 0, max_rcs, // min and max action
+//                                 0, 0, // initial alpha and beta
+//                                 1.0); // gamma
+// }
+//
+//
+// test_pg_actor multi_beta_agent::make_rcs_actor_ccw
+// (const tile_coder_base& tc, double lambda, double alpha) {
+//   const double max_rcs = lunar_lander_simulator::MAX_RCS();
+//   return test_pg_actor (tc, lambda, alpha,
+//                                 -max_rcs, 0, // min and max action
 //                                 0, 0, // initial alpha and beta
 //                                 1.0); // gamma
 // }
 
 
-cart_pole_simulator::action beta_agent::initialize(std::mt19937& rng, VectorXd state) {
+cart_pole_simulator::action multi_beta_agent::compute_action(std::mt19937& rng, const VectorXi& features) {
+  if (epsilon > 0 && rng2()/rng2.max() < epsilon) {
+    thrust_forward = (rng2()/rng2.max() < 0.5);
+  } else {
+    thrust_forward = (critic_forward.get_value() > critic_backward.get_value());
+  }
+  return cart_pole_simulator::action(thrust_forward ? thrust_actor_forward.act(rng, features) :
+                                                        thrust_actor_backward.act(rng, features));
+}
+
+
+cart_pole_simulator::action multi_beta_agent::initialize(std::mt19937& rng, VectorXd state) {
   clip_state(state);
   VectorXi features = tc.indices(state);
 
-  critic.initialize(features);
-  thrust_actor.initialize();
-  // rcs_actor.initialize();
+  critic_forward.initialize(features);
+  critic_backward.initialize(features);
+  thrust_actor_forward.initialize();
+  thrust_actor_backward.initialize();
 
   return compute_action(rng, features);
 }
 
 
-cart_pole_simulator::action beta_agent::update(std::mt19937& rng, VectorXd state,
+cart_pole_simulator::action multi_beta_agent::update(std::mt19937& rng, VectorXd state,
                                                           double reward, bool terminal, bool learn) {
   clip_state(state);
   VectorXi features = tc.indices(state);
 
   if (learn) {
-    double td_error = critic.evaluate(features, reward, terminal);
-    thrust_actor.learn(td_error);
-    // rcs_actor.learn(td_error);
+    // double td_error;
+    // if (thrust_forward) {
+    //   td_error = critic_forward.evaluate(features, reward, terminal);
+    // } else {
+    //   td_error = critic_backward.evaluate(features, reward, terminal);
+    // }
+    double td_error = beta_td_critic::evaluate_multi(critic_forward, critic_backward, thrust_forward, features,\
+                                                     reward, terminal);
+    thrust_actor_forward.learn(td_error);
+    thrust_actor_backward.learn(td_error);
+    // rcs_actor_cw.learn(td_error);
+    // rcs_actor_ccw.learn(td_error);
   }
 
   return compute_action(rng, features);

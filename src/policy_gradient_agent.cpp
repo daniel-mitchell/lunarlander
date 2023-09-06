@@ -31,10 +31,15 @@ void linear_function_approx::update(double delta) {
 }
 
 
+double td_critic::get_value() {
+  return value.value(features);
+}
+
+
 double td_critic::evaluate(const VectorXi& new_features, double reward, bool terminal) {
   double old_value = value.value (features);
   double new_value = terminal ? 0.0 : value.value (new_features);
-  double td_error = reward + gamma*new_value - old_value;
+  /*double*/ td_error = reward + gamma*new_value - old_value;
 
   value.add_features(features);
   value.update(alpha * td_error);
@@ -42,6 +47,55 @@ double td_critic::evaluate(const VectorXi& new_features, double reward, bool ter
   features = new_features;
 
   return td_error;
+}
+
+double td_critic::evaluate_multi(td_critic& critic_1, td_critic& critic_2, bool direction, \
+                                    const VectorXi& new_features, double reward, bool terminal) {
+  double old_value = direction ? critic_1.get_value() : critic_2.get_value();
+  double new_value = terminal ? 0.0 :\
+                      std::max(critic_1.value.value(new_features), critic_2.value.value(new_features));
+  critic_1.td_error = reward + critic_1.gamma*new_value - old_value; //Both critics should have the same gamma
+  critic_2.td_error = critic_1.td_error;
+  
+  if (direction) {
+    critic_1.value.add_features(critic_1.features);
+    // critic_2.value.add_features(VectorXi::Zero(critic_2.features.size()));
+    critic_1.value.update(critic_1.alpha * critic_1.td_error);
+  } else {
+    // critic_1.value.add_features(VectorXi::Zero(critic_1.features.size()));
+    critic_2.value.add_features(critic_2.features);
+    critic_2.value.update(critic_2.alpha * critic_2.td_error);
+  }
+  // critic_1.value.update(critic_1.alpha * critic_1.td_error);
+  // critic_2.value.update(critic_2.alpha * critic_2.td_error);
+
+  critic_1.features = new_features;
+  critic_2.features = new_features;
+
+  return critic_1.td_error;
+}
+
+double td_critic::evaluate_multi3(td_critic& critic_1, td_critic& critic_2, td_critic& critic_3, int direction, \
+                                    const VectorXi& new_features, double reward, bool terminal) {
+  std::vector<td_critic> critics = {critic_1, critic_2, critic_3};
+  double old_value = critics[direction].get_value();
+  double new_value = terminal ? 0.0 :\
+                      std::max(std::max(critic_1.value.value(new_features), critic_2.value.value(new_features)),\
+                                  critic_3.value.value(new_features));
+  critic_1.td_error = reward + critic_1.gamma*new_value - old_value; //All critics should have the same gamma
+  critic_2.td_error = critic_1.td_error;
+  critic_3.td_error = critic_1.td_error;
+  
+  critics[direction].value.add_features(critics[direction].features);
+  critics[direction].value.update(critics[direction].alpha * critics[direction].td_error);
+  // critic_1.value.update(critic_1.alpha * critic_1.td_error);
+  // critic_2.value.update(critic_2.alpha * critic_2.td_error);
+
+  critic_1.features = new_features;
+  critic_2.features = new_features;
+  critic_3.features = new_features;
+
+  return critic_1.td_error;
 }
 
 
@@ -76,11 +130,11 @@ void policy_gradient_actor::learn(const double td_error) {
   const double variance = std::pow(dist.sigma(),2) * (1 - trunc_grad_sigma - std::pow(trunc_grad_mu,2));
   const double scaled_alpha = alpha * variance;
 
-  const double mu_grad = (std_action + trunc_grad_mu) / dist.sigma();
+  /*const double*/ mu_grad = (std_action + trunc_grad_mu) / dist.sigma();
   mu.add_features(features, mu_grad);
   mu.update(scaled_alpha * td_error);
 
-  const double sigma_grad = (std::pow(std_action,2) - 1 + trunc_grad_sigma) /
+  /*const double*/ sigma_grad = (std::pow(std_action,2) - 1 + trunc_grad_sigma) /
     dist.sigma() * (dist.sigma() - min_sigma) *
     (1 - (dist.sigma() - min_sigma) / sigma_range);
   sigma.add_features(features, sigma_grad);
